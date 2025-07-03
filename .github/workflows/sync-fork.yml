@@ -3,8 +3,8 @@ name: Sync Fork
 
 on:
   schedule:
-    - cron: '0 * * * *' # Executa a cada hora
-  workflow_dispatch: # Permite a execução manual
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -14,10 +14,7 @@ jobs:
       - name: Checkout Fork
         uses: actions/checkout@v4
         with:
-          # Usamos um Personal Access Token (PAT) com permissão de 'repo'
-          # para poder fazer o push das atualizações.
           token: ${{ secrets.GH_PAT }}
-          # Garante que todas as branches e tags sejam baixadas.
           fetch-depth: 0
 
       - name: Set up Git
@@ -28,13 +25,14 @@ jobs:
       - name: Add Upstream Remote
         run: git remote add upstream https://github.com/alexdev03/UnlimitedNametags.git
 
-      - name: Fetch Upstream
-        run: git fetch upstream
-
-      - name: Merge Upstream Changes
+      - name: Sync Tags and Branch
         run: |
-          # Aqui estamos sincronizando a branch 'master' do original com a 'master' do seu fork.
-          # Se as branches tiverem nomes diferentes (ex: 'main'), ajuste abaixo.
+          # Sincroniza a branch main
+          git fetch upstream --prune
           git checkout main
           git merge upstream/main
           git push origin main
+          
+          # Sincroniza todas as tags do upstream para o seu fork
+          git fetch upstream --tags --force
+          git push origin --tags --force
