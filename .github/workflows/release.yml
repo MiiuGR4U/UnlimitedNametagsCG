@@ -1,0 +1,53 @@
+# release.yml
+name: Create Release
+
+# Este workflow é acionado quando uma nova tag é enviada (pelo sync ou manualmente)
+on:
+  push:
+    tags:
+      - '*' # Aciona para qualquer tag
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Permissão necessária para criar releases
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # O nome da tag que acionou o workflow fica disponível em github.ref_name
+      - name: Get Original Release Info
+        id: get_release
+        run: |
+          # Usamos a API do GitHub para pegar os dados da release da tag correspondente no repositório original
+          # e salvamos o corpo (changelog) em uma variável de saída.
+          CHANGELOG=$(gh api repos/alexdev03/UnlimitedNametags/releases/tags/${{ github.ref_name }} --jq '.body')
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        env:
+          # O GITHUB_TOKEN é necessário para se autenticar na API
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # O corpo da release será o changelog que pegamos do repositório original
+          body: ${{ steps.get_release.outputs.changelog }}
+          # Anexa o .jar gerado que está na pasta target
+          files: target/*.jar
