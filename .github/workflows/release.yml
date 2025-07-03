@@ -23,14 +23,22 @@ jobs:
       - name: Get Original Release Info
         id: get_release
         run: |
-          # Usamos a API do GitHub para pegar os dados da release da tag correspondente no repositório original
-          # e salvamos o corpo (changelog) em uma variável de saída.
-          CHANGELOG=$(gh api repos/alexdev03/UnlimitedNametags/releases/tags/${{ github.ref_name }} --jq '.body')
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Try to fetch the official release notes from the upstream repository's tag.
+          # The "|| true" part ensures that if the command fails (e.g., 404 Not Found), the script doesn't exit.
+          CHANGELOG_BODY=$(gh api repos/alexdev03/UnlimitedNametags/releases/tags/${{ github.ref_name }} --jq '.body' 2>/dev/null) || true
+
+          # If the command failed or returned an empty body, use a fallback message.
+          if [[ -z "$CHANGELOG_BODY" ]]; then
+            CHANGELOG_BODY="No official changelog was found for this tag. Please check the commit history for details."
+          fi
+          
+          # Use a heredoc to safely output the changelog to the next steps.
+          cat <<EOF >> "$GITHUB_OUTPUT"
+          changelog<<HEREDOC
+          $CHANGELOG_BODY
+          HEREDOC
+          EOF
         env:
-          # O GITHUB_TOKEN é necessário para se autenticar na API
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up JDK 21
