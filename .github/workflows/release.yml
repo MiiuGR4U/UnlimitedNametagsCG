@@ -6,7 +6,8 @@ on:
   push:
     tags:
       - '*' # Aciona para qualquer tag
-
+  workflow_dispatch:
+  
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
