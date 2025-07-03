@@ -1,38 +1,51 @@
-# release.yml
+# .github/workflows/release.yml
 name: Create Release
 
-# Este workflow é acionado quando uma nova tag é enviada (pelo sync ou manualmente)
 on:
   push:
     tags:
-      - '*' # Aciona para qualquer tag
+      - '*'
   workflow_dispatch:
-  
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      # Permissão necessária para criar releases
       contents: write
       
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # O nome da tag que acionou o workflow fica disponível em github.ref_name
-      - name: Get Original Release Info
-        id: get_release
+      # Passo modificado para ser mais inteligente
+      - name: Define Tag e Busca Changelog
+        id: get_info
         run: |
-          # Try to fetch the official release notes from the upstream repository's tag.
-          # The "|| true" part ensures that if the command fails (e.g., 404 Not Found), the script doesn't exit.
-          CHANGELOG_BODY=$(gh api repos/alexdev03/UnlimitedNametags/releases/tags/${{ github.ref_name }} --jq '.body' 2>/dev/null) || true
+          # Verifica se o workflow foi acionado por uma tag.
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            # Se sim, usa o nome da tag que acionou o workflow.
+            TAG_NAME="${{ github.ref_name }}"
+            echo "Workflow acionado pela tag: $TAG_NAME"
+          else
+            # Se não (foi manual), busca a última tag do repositório original.
+            echo "Workflow acionado manualmente. Buscando última tag do projeto original..."
+            TAG_NAME=$(gh api repos/alexdev03/UnlimitedNametags/releases/latest --jq '.tag_name')
+            echo "Última tag encontrada: $TAG_NAME"
+          fi
 
-          # If the command failed or returned an empty body, use a fallback message.
+          # Salva a tag definida para ser usada nos próximos passos.
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+          # Com a tag correta em mãos, busca o changelog.
+          echo "Buscando changelog para a tag: $TAG_NAME"
+          CHANGELOG_BODY=$(gh api repos/alexdev03/UnlimitedNametags/releases/tags/$TAG_NAME --jq '.body' 2>/dev/null) || true
+
+          # Se o changelog não for encontrado, usa uma mensagem padrão.
           if [[ -z "$CHANGELOG_BODY" ]]; then
-            CHANGELOG_BODY="No official changelog was found for this tag. Please check the commit history for details."
+            CHANGELOG_BODY="Nenhum changelog oficial encontrado para esta tag. Verifique o histórico de commits para detalhes."
           fi
           
-          # Use a heredoc to safely output the changelog to the next steps.
+          # Salva o changelog para o próximo passo.
           cat <<EOF >> "$GITHUB_OUTPUT"
           changelog<<HEREDOC
           $CHANGELOG_BODY
@@ -56,7 +69,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # O corpo da release será o changelog que pegamos do repositório original
-          body: ${{ steps.get_release.outputs.changelog }}
-          # Anexa o .jar gerado que está na pasta target
+          # Usa a tag que foi definida dinamicamente no primeiro passo.
+          tag_name: ${{ steps.get_info.outputs.tag_name }}
+          # Usa o changelog que foi encontrado.
+          body: ${{ steps.get_info.outputs.changelog }}
+          # Anexa o .jar gerado.
           files: target/*.jar
