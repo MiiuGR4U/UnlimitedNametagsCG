@@ -3,9 +3,9 @@ name: Build with Gradle
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
   # Adicionamos isso para permitir a execução manual
   workflow_dispatch:
 
