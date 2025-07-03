@@ -3,10 +3,11 @@ name: Build with Gradle
 
 on:
   push:
+    # Corrigido para a branch 'main'
     branches: [ "main" ]
   pull_request:
+    # Corrigido para a branch 'main'
     branches: [ "main" ]
-  # Adicionamos isso para permitir a execução manual
   workflow_dispatch:
 
 jobs:
@@ -20,7 +21,6 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          # Alterado para a versão 21, conforme solicitado
           java-version: '21'
           distribution: 'temurin'
 
@@ -29,3 +29,9 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnlimitedNametags
+          path: target/*.jar
