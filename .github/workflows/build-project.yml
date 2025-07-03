@@ -3,9 +3,11 @@ name: Build with Gradle
 
 on:
   push:
-    branches: [ "master" ] # Acionado a cada push na branch 'master'
+    branches: [ "master" ]
   pull_request:
-    branches: [ "master" ] # Acionado em pull requests para a 'master'
+    branches: [ "master" ]
+  # Adicionamos isso para permitir a execução manual
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,13 +20,12 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21' # O build.gradle.kts especifica o Java 17
+          # Alterado para a versão 21, conforme solicitado
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        # O comando 'build' executa a compilação, testes e outras checagens.
-        # A tarefa 'shadowJar' também é executada pelo 'build' graças à configuração do projeto.
         run: ./gradlew build
